@@ -44,6 +44,7 @@ class Configuration:
         self.drawing = None
         self.dump_png = dosave
 
+        self.config = set()
         # initialize the configuration
         if cubes != None:
             self.init_configuration(cubes, False)
@@ -64,8 +65,7 @@ class Configuration:
             # creates cubes from a set
             MX = min([tup[0] for tup in init_config])
             MY = max([tup[1] for tup in init_config])
-            for temp in init_config:
-                break
+            for temp in init_config: break
             self.dim = len(temp)
             
             if self.dim > 2:
@@ -89,10 +89,11 @@ class Configuration:
     def reconfig(self):
         if self.dodraw:
             self.init_draw()
-        if not self.verify_configuration():
+        check_valid = self.verify_configuration()
+        if check_valid != None:
             print("Configuration is invalid!")
             if self.dodraw:
-                self.drawing.draw_configuration(self.config)
+                self.drawing.draw_configuration(self.config, [check_valid])
                 while not self.drawing.check_draw_close():
                     pass
         else:
@@ -224,50 +225,56 @@ class Configuration:
     
     # CHECK RULES FOR CONFIGURATIONS
     def verify_configuration(self):
+        if self.config_size == 0:
+            return None
+        
         # connectivity condition
         for c1 in self.config: break
         comp_c1 = self.find_component(c1)
         for c2 in self.config:
-            assert c2 in comp_c1
+            if not c2 in comp_c1:
+                return c2.pos
 
         # check rules
         RULES = self.get_rules()
-        
+
         for c0 in self.config:
-            x = c0[0]
-            y = c0[1]
-            U = (0,1); D = (0,-1); R = (1,0); L = (-1,0);
-            LR = (L,R); UD = (U,D);
-            search_dict = {U:LR, D:LR, R:UD, L:UD}
+            cpos = c0.pos
+            if self.dim > 2:
+                U = (0,0,1); D = (0,0,-1);
+                R = (1,0,0); L = (-1,0,0);
+                F = (0,1,0); B = (0,-1,0);
+                LRFB = (L,R,F,B); UDFB = (U,D,F,B); UDLR = (U,D,L,R);
+                search_dict = {U:LRFB, D:LRFB, R:UDFB, L:UDFB, F:UDLR, B:UDLR}
+            else:
+                U = (0,1); D = (0,-1);
+                R = (1,0); L = (-1,0);
+                LR = (L,R); UD = (U,D);
+                search_dict = {U:LR, D:LR, R:UD, L:UD}
             for (major, minors) in search_dict.iteritems():
                 for minor in minors:
                     (M, m) = (major, minor)
-                    # # derived cubes
-                    # c5 c4 c3
-                    # c0 c1 c2
-                    c1 = add_t((x,y),M)
-                    c2 = (x+2*M[0],y+2*M[1])
-                    c3 = (x+2*M[0]+m[0],y+2*M[1]+m[1])
-                    c4 = (x+M[0]+m[0],y+M[1]+m[1])
-                    c5 = (x+m[0],y+m[1])
-                    # (1)
-                    assert not (c1 not in self.config and c2 in self.config)
-                    # (2)
-                    assert (not (c1 not in self.config and c4 in self.config and
-                        c5 not in config))
-                    # (3)
-                    assert (not (c1 not in self.config and c2 not in self.config
-                        and c3 in self.config and c4 not in self.config and
-                        c5 not in self.config))
-        return True
+
+                    for i in range(len(RULES)):
+                        r = RULES[i]
+                        failedTest = True
+                        for cond in r:
+                            ci = add_t(add_t(cpos, sca_t(M, cond[0])), sca_t(m, cond[1]))
+                            if (self.has_cube(ci) != cond[2]):
+                                failedTest = False
+                                break
+                        if failedTest:
+                            print "failed", i+1
+                            return c0
+        return None
 
     def get_rules(self):
+        RULES = [((0,0,True),(1,0,False),(2,0,True)),
+                    ((0,0,True),(1,0,False),(0,1,False),(1,1,True)),
+                    ((0,0,True),(1,0,False),(2,0,False),(0,1,False),(1,1,False),(2,1,True))]
         if self.ispar:
-            RULES = [((0,0,True),(1,0,False),(2,0,True)),
-                     ((0,0,True),(1,0,False),(0,1,False),(1,1,True)),
-                     ((0,0,True),(1,0,False),(2,0,False),(0,1,False),(1,1,False),(2,1,True))]
-        else:
-
+            more_rules = []
+            RULES.extend(more_rules)
         return RULES
             
     # MOVE CUBE
@@ -452,6 +459,8 @@ class Configuration:
         Return the component cube_a is part of as a set
         For connected configurations: all cubes should be
         part of one component
+
+        Returns Cubes
         '''
         # Run a simple breadth-first search
         marked_cubes = set([cube_a])
@@ -467,10 +476,11 @@ class Configuration:
         return marked_cubes
 
     def find_neighbors(self,cube):
+        # returns Cubes
         x = cube[0]
         y = cube[1]
         if self.dim > 2:
-            z = cube[3]
+            z = cube[2]
             neighbors = set([Cube((x+i, y+j, z+k)) for i in [-1,0,1] for j in [-1,0,1] for k in [-1,0,1] if
                 self.has_cube((x+i, y+j, z+k)) and abs(i) + abs(j) + abs(k) == 1])
         else:
@@ -501,20 +511,23 @@ class Configuration:
         return str( set( str(a) for a in self.config ) )
 
 def main():
-    #c = Configuration(None, False, True)
+    c = Configuration(None, False, True)
     #c = Configuration('MIT.config', False, True)
-    #c.reconfig()
-    c = Configuration([(0,0,0),(1,0,0),(0,0,1), (1,-1,0), (0,-1,0)], False, True)
-    c.init_draw()
-    c.drawing.draw_configuration(c.config)
-    c.drawing.wait(500)
-    print c.rotate((1,1,0), (0,0,1))
-    print c.rotate((1,1,0), (0,0,-1))
-    print c.rotate((1,1,0), (0,1,0))
-    print c.rotate((1,1,0), (0,-1,0))
-    print c.rotate((1,1,0), (1,0,0))
-    print c.rotate((1,1,0), (-1,0,0))
-    c.drawing.close()
-    print c
+    c.reconfig()
+    #c = Configuration([(0,0,0),(1,0,0),(1,-1,0),(0,-1,0),
+    #                   (0,0,1)],
+    #                  False, True)
+    #c.init_draw()
+    #c.drawing.draw_configuration(c.config)
+    #print c.verify_configuration()
+    #c.drawing.wait(500)
+    #print c.rotate((1,1,0), (0,0,1))
+    #print c.rotate((1,1,0), (0,0,-1))
+    #print c.rotate((1,1,0), (0,1,0))
+    #print c.rotate((1,1,0), (0,-1,0))
+    #print c.rotate((1,1,0), (1,0,0))
+    #print c.rotate((1,1,0), (-1,0,0))
+    #c.drawing.close()
+    #print c
 
 if __name__ == '__main__': main()
