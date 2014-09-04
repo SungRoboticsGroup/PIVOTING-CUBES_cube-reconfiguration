@@ -48,7 +48,7 @@ class ConfigDraw2D:
             self.screen.fill(BLACK)
 
         # NOTE: precendence order
-        for cube in config:
+        for cube in config.union(set(rotating_cubes)):
             color = DEFAULT
 
             if cube in N_set:

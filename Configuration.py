@@ -4,7 +4,7 @@
 # can: rotate cubes
 #
 # originally: 7/15/2014 by James Bern
-# last modified: 9/2/2014 by Cynthia Sung
+# last modified: 9/4/2014 by Cynthia Sung
 
 from Cube import Cube
 from ConfigDraw2D import ConfigDraw2D
@@ -20,9 +20,16 @@ from pprint import pprint
 class Configuration:
     """Configuration class"""
 
+    BUFF = 3
+
     # INITIALIZATION
     def __init__(self, cubes, ispar = False, dodraw = False, dosave = False):
         self.ispar = ispar
+
+        # variables for parallel alg
+        self.buff_timer = Configuration.BUFF
+        self.next_cube = []
+        self.next_checkpoint = None
 
         # the cubes
         self.cubes = set()
@@ -34,6 +41,7 @@ class Configuration:
         self.M_set = []
         # nonsplitting cubes
         self.N_set = []
+        self.P_list = []
         # tail cubes
         self.T_set = []
 
@@ -50,6 +58,8 @@ class Configuration:
             self.init_configuration(cubes, False)
         else:
             self.init_configuration(None, False)
+
+        #self.orig_config = copy of self.config cubes
     
     def init_configuration(self, init_config=None, random=False):
         if isinstance(init_config, str):
@@ -102,7 +112,7 @@ class Configuration:
             self.classify_configuration()
             if self.dodraw:
                 self.drawing.draw_configuration(self.config, self.O_set, self.M_set, self.N_set, self.T_set, self.rotating_cubes)
-                self.drawing.wait(1000)
+                self.drawing.wait(500)
                 
             frame_i = 0
             while True:
@@ -128,101 +138,61 @@ class Configuration:
             self.close_draw()
 
     def relocate_next_to_tail(self):
-        self.step_configuration()
-        while self.rotating_cubes:
+        do_next_step = True
+        while do_next_step:
+            do_next_step = self.step_configuration()
+            if do_next_step == None:
+                if self.dodraw:
+                    while not self.drawing.check_draw_close(): pass
+                return False
             if self.dodraw:
                 if self.drawing.check_draw_close():
                     return False
                 self.drawing.draw_configuration(self.config, self.O_set, self.M_set, self.N_set, self.T_set, self.rotating_cubes)
-            self.step_configuration()
         return True
 
     def step_configuration(self):
-        if not self.rotating_cubes:
-            # Grab next cube_n
-            # Pythonic for "if len(N_set) != 0"
-            if self.N_set:
-                self.rotating_cubes = [self.N_set.pop()]
-                # unnecessary, but clarifies intent
-                self.N_set.append(self.rotating_cubes[0])
-            # Search for P for a 3 Cube Escape
-            else:
-                # axes
-                P_found = False
-                P_major = None # the three cubes lie along this axis
-                P_minor = None # connects filled cubes to empty outer free space
-                for cube_m in self.M_set:
-                    x, y = cube_m
-                    U = (0,1); D = (0,-1); R = (1,0); L = (-1,0)
-                    LR = (L,R); UD = (U,D);
-                    search_dict = {U:LR, D:LR, R:UD, L:UD}
-                    for (major, minors) in search_dict.iteritems():
-                        for minor in minors:
-                            broken = False
-                            for i in xrange(3):
-                                full = (x + i*major[0], y + i*major[1])
-                                empty = (full[0] + minor[0], full[1] + minor[1])
-                                if full not in config or empty in config:
-                                    broken = True
-                            if not broken:
-                                P_found = True
-                                (P_major, P_minor) = (major, minor)
-                                self.rotating_cubes = [cube_m,
-                                        (cube_m[0] + major[0], cube_m[1] + major[1]),
-                                        (cube_m[0] + 2*major[0], cube_m[1] + 2*major[1])]
-                                return
-                # No more moves exist
-                if not P_found:
-                    for cube in self.config:
-                        # horizontal line condition
-                        if cube[1] != self.extreme[1]:
-                            print "\nAlgorithm failed.\n"
-                            pprint(config)
-                            exit(1)
-                    print "\nI think we are done.\n"
-                    exit(0)
-
-        else:
+        # Stage next_cube or next_P4 to run (if buff timer expended)
+        # Wait on/decrement timer
+        not_reclassify = True
+        if (self.next_checkpoint==None and self.next_cube) or (self.rotating_cubes and self.rotating_cubes[-1].pos == self.next_checkpoint):
+            # Stage cubes
             # Standard tail relocation
-            if len(self.rotating_cubes) == 1:
-                cube_tr = self.rotating_cubes[0]
-                # If not part of tail...
-                if not (cube_tr[1] == self.extreme[1] and cube_tr[0] > self.extreme[0]):
-                    self.config.remove(cube_tr)
-                    newpos = self.rotate(cube_tr, cube_tr.dir)
-                    cube_tr.translate(sub_t(newpos,cube_tr.pos))
-                    # note: must remove and add cube to config because of hashing
-                    self.config.add(cube_tr)
-                    
-                    # FORNOW: so the two overall operations (tr/3ce) are paralell
-                    self.rotating_cubes = [cube_tr]
-                else:
-                    self.T_set.append(cube_tr)
-                    self.rotating_cubes = []
-            # 3 Cube Escape
+            if self.next_cube:
+                # get next cube to move
+                thecube = self.next_cube.pop(0)
+                nc = thecube[0]   # cube id
+                chk = thecube[1]  # checkpoint
+                
+                assert nc in self.config
+                self.rotating_cubes.append(nc)
+                self.config.remove(nc)
+                self.next_checkpoint = chk
             else:
-                assert len(self.rotating_cubes) == 3
-                moved_cube = False
-                for i in range(3):
-                    cube_3ce = self.rotating_cubes[i]
-                    if cube_3ce[1] == self.extreme[1] and cube_3ce[0] > self.extreme[0]:
-                        # sloppy
-                        self.T_set.append(cube_3ce)
-                        continue
-                    else:
-                        moved_cube = True
-                        self.config.remove(cube_3ce)
-                        newpos = rotate(cube_3ce, cube_3ce.dir)
-                        cube_3ce.translate(sub_t(newpos, cube_3ce.pos))
-                        # note: must remove and add cube to config because of hashing
-                        self.config.add(cube_3ce)
-                        # update rotating_cubes
-                        self.rotating_cubes[i] = cube_3ce
-                        break
-                # If all three cubes part of tail...
-                if not moved_cube:
-                    self.rotating_cubes = []
-    
+                self.next_checkpoint = None
+                not_reclassify = False
+
+        # run the cubes
+        # No more cubes to move. Just wait for everything that's moving to get to the tail
+        if self.rotating_cubes:
+            next_rotating_cubes = []
+            for cube_r in self.rotating_cubes:
+                # Still running...
+                if not (cube_r[1] == self.extreme[1] and cube_r[0] > self.extreme[0]):
+                    newpos = self.rotate(cube_r, cube_r.dir)
+                    cube_r.translate(sub_t(newpos,cube_r.pos))
+                    next_rotating_cubes.append(cube_r)
+                # Made it to the tail.
+                else:
+                    self.config.add(cube_r)
+                    self.T_set.append(cube_r)
+                    # do _not_ add to next_running_cubes
+            self.rotating_cubes = next_rotating_cubes
+        elif not self.next_cube:
+            print ("We made it.")
+            return None
+        return not_reclassify
+        
     # CHECK RULES FOR CONFIGURATIONS
     def verify_configuration(self):
         if self.config_size == 0:
@@ -237,45 +207,50 @@ class Configuration:
 
         # check rules
         RULES = self.get_rules()
+        search_dict = self.search_dir()
 
         for c0 in self.config:
             cpos = c0.pos
-            if self.dim > 2:
-                U = (0,0,1); D = (0,0,-1);
-                R = (1,0,0); L = (-1,0,0);
-                F = (0,1,0); B = (0,-1,0);
-                LRFB = (L,R,F,B); UDFB = (U,D,F,B); UDLR = (U,D,L,R);
-                search_dict = {U:LRFB, D:LRFB, R:UDFB, L:UDFB, F:UDLR, B:UDLR}
-            else:
-                U = (0,1); D = (0,-1);
-                R = (1,0); L = (-1,0);
-                LR = (L,R); UD = (U,D);
-                search_dict = {U:LR, D:LR, R:UD, L:UD}
+
+            # major axes and minor axes
             for (major, minors) in search_dict.iteritems():
                 for minor in minors:
-                    (M, m) = (major, minor)
-
+                    # check each rule
                     for i in range(len(RULES)):
                         r = RULES[i]
-                        failedTest = True
-                        for cond in r:
-                            ci = add_t(add_t(cpos, sca_t(M, cond[0])), sca_t(m, cond[1]))
-                            if (self.has_cube(ci) != cond[2]):
-                                failedTest = False
-                                break
-                        if failedTest:
-                            print "failed", i+1
+                        # if we broke a rule
+                        if self.has_instance(r, cpos, major, minor):
+                            print "configuration violated rule", i+1
                             return c0
         return None
 
-    def get_rules(self):
-        RULES = [((0,0,True),(1,0,False),(2,0,True)),
-                    ((0,0,True),(1,0,False),(0,1,False),(1,1,True)),
-                    ((0,0,True),(1,0,False),(2,0,False),(0,1,False),(1,1,False),(2,1,True))]
+    def has_instance(self, rule, pos, major, minor):
+        failedTest = True
+        for cond in rule:
+            ci = add_t(add_t(pos, sca_t(major, cond[0])), sca_t(minor, cond[1]))
+            if (self.has_cube(ci) != cond[2]):
+                failedTest = False
+                break
+        return failedTest
+
+    def P_search(self, m1):
+        if isinstance(m1,Cube):
+            m1 = m1.pos
+
+        search_dict = self.search_dir()
         if self.ispar:
-            more_rules = []
-            RULES.extend(more_rules)
-        return RULES
+            Plen = 4
+        else:
+            Plen = 3
+        P = self.P(Plen)
+
+        for (major, minors) in search_dict.iteritems():
+            for minor in minors:
+                # we found an instance of P_i
+                if self.has_instance(P, m1, major, minor):
+                    P = [Cube(add_t(m1, sca_t(major, i))) for i in range(Plen)]
+                    return P
+        return None
             
     # MOVE CUBE
     def rotate(self, cube, direction, virtual=False):
@@ -433,21 +408,66 @@ class Configuration:
 
         # update N_set
         self.N_set = []
+        self.P_set = []
         for cube in self.M_set:
-            non_splitting = True
-            x, y = cube
+            splitting = False
+            
+            x = cube[0]
+            y = cube[1]
 
             clockwise_2box_coords = [((x+1,y),(x,y+1),(x+1,y+1)),
                                      ((x,y+1),(x-1,y),(x-1,y+1)),
                                      ((x-1,y),(x,y-1),(x-1,y-1)),
                                      ((x,y-1),(x+1,y),(x+1,y-1))]
             for (c_curr, c_next, c_corner) in clockwise_2box_coords:
-                if (c_curr in self.config and c_next in self.config
-                        and c_corner not in self.config):
-                    non_splitting = False
+                if (self.has_cube(c_curr) and self.has_cube(c_next)
+                        and not self.has_cube(c_corner)):
+                    splitting = True
 
-            if non_splitting:
+            # FORNOW: sloppy in so many ways
+            if not splitting:
                 self.N_set.append(cube)
+
+                if not self.next_cube:
+                    if self.ispar:
+                        chk = cube.pos
+                        for _ in xrange(Configuration.BUFF+3):
+                            newchk = self.rotate(chk, cube.dir)
+                            if newchk[1] == self.extreme[1]:
+                                diff0 = newchk[0]-self.extreme[0]-len(self.T_set)
+                                if diff0 > 0:
+                                    if diff0 <= len(self.rotating_cubes):
+                                        chk = (newchk[0], chk[1])
+                                    break
+                            chk = newchk
+                    else:
+                        chk = (self.extreme[0]+len(self.T_set)+len(self.rotating_cubes)+1, self.extreme[1])
+                    print "NEXT NC:", cube
+                    self.next_cube = [(cube,chk)]
+            else:
+                search_results = self.P_search(cube)
+                P = search_results
+                if search_results != None:
+                    self.P_set.append(P)
+                    if not self.next_cube:
+                        if self.ispar:
+                            endTail = False
+                            chk = cube.pos
+                            for _ in xrange(Configuration.BUFF+3):
+                                newchk = self.rotate(chk, cube.dir)
+                                if newchk[1] == self.extreme[1]:
+                                    diff0 = newchk[0]-self.extreme[0]-len(self.T_set)
+                                    if diff0 > 0:
+                                        if diff0 <= len(self.rotating_cubes):
+                                            chk = (newchk[0], chk[1])
+                                        break
+                                chk = newchk
+                        else:
+                            chk = (self.extreme[0]+len(self.T_set)+len(self.rotating_cubes)+1, self.extreme[1])
+                            endTail = True
+                        print "NEXT P:", cube
+                        self.next_cube = [(P[i],add_t(chk,(i if endTail else 0,0))) for i in range(len(P))]
+            
 
         # check that we haven't done anything crazy
         assert len(self.config)+len(self.rotating_cubes) == self.config_size
@@ -476,16 +496,33 @@ class Configuration:
         return marked_cubes
 
     def find_neighbors(self,cube):
-        # returns Cubes
+        '''
+        return a list of neighbors in the xy plane, in clockwise order if possible.
+        e.g. for - y -
+                 - c x
+                 - - -
+        the returned list should be [x, y]
+        '''
         x = cube[0]
         y = cube[1]
         if self.dim > 2:
             z = cube[2]
-            neighbors = set([Cube((x+i, y+j, z+k)) for i in [-1,0,1] for j in [-1,0,1] for k in [-1,0,1] if
-                self.has_cube((x+i, y+j, z+k)) and abs(i) + abs(j) + abs(k) == 1])
+            neighbors = set([Cube((x+i, y+j, z)) for i in [-1,0,1] for j in [-1,0,1] if
+                self.has_cube((x+i, y+j, z)) and abs(i) + abs(j) == 1])
         else:
             neighbors = set([Cube((x+i, y+j)) for i in [-1,0,1] for j in [-1,0,1] if
                 self.has_cube((x+i, y+j)) and abs(i) + abs(j) == 1])
+
+        # FORNOW: this is a hack
+        if len(neighbors) == 2:
+            clockwise_2box_coords = [((x+1,y),(x,y+1),(x+1,y+1)),
+                                     ((x,y+1),(x-1,y),(x-1,y+1)),
+                                     ((x-1,y),(x,y-1),(x-1,y-1)),
+                                     ((x,y-1),(x+1,y),(x+1,y-1))]
+            for (c_curr, c_next, _) in clockwise_2box_coords:
+                if (self.has_cube(c_curr) and self.has_cube(c_next)):
+                    return [Cube(c_curr), Cube(c_next)]
+        
         return neighbors
 
     def exists_path(self, cube_a, cube_b):
@@ -510,9 +547,41 @@ class Configuration:
     def __str__(self):
         return str( set( str(a) for a in self.config ) )
 
+    # CONSTANTS
+    def get_rules(self):
+        RULES = [((0,0,True),(1,0,False),(2,0,True)),
+                    ((0,0,True),(1,0,False),(0,1,False),(1,1,True)),
+                    ((0,0,True),(1,0,False),(2,0,False),(0,1,False),(1,1,False),(2,1,True))]
+        if self.ispar:
+            more_rules = [((0,0,True),(1,0,False),(2,0,False),(3,0,True)),
+                          ((0,0,True),(1,0,False),(2,0,False),(0,1,False),(1,1,False),(2,1,False),(0,2,False),(1,2,False),(2,2,True)),
+                          ((0,0,True),(1,0,False),(0,1,False),(1,1,False),(0,2,False),(1,2,False),(0,3,False),(1,3,True)),
+                          ((0,0,True),(1,0,False),(2,0,False),(0,1,False),(1,1,False),(2,1,False),(0,2,False),(1,2,False),(2,2,False),(0,3,False),(1,3,False),(2,3,True))]
+            RULES.extend(more_rules)
+        return RULES
+
+    def P(self, N):
+        P = [(i,j,j%2==0) for i in range(N) for j in range(2)]
+        return P
+
+    def search_dir(self):
+        if self.dim > 2:
+            U = (0,0,1); D = (0,0,-1);
+            R = (1,0,0); L = (-1,0,0);
+            F = (0,1,0); B = (0,-1,0);
+            LRFB = (L,R,F,B); UDFB = (U,D,F,B); UDLR = (U,D,L,R);
+            search_dict = {U:LRFB, D:LRFB, R:UDFB, L:UDFB, F:UDLR, B:UDLR}
+        else:
+            U = (0,1); D = (0,-1);
+            R = (1,0); L = (-1,0);
+            LR = (L,R); UD = (U,D);
+            search_dict = {U:LR, D:LR, R:UD, L:UD}
+        return search_dict
+
 def main():
-    c = Configuration(None, False, True)
-    #c = Configuration('MIT.config', False, True)
+    #c = Configuration(None, False, True)
+    #c = Configuration('abstract.config', False, True)
+    c = Configuration('partest.config', True, True)
     c.reconfig()
     #c = Configuration([(0,0,0),(1,0,0),(1,-1,0),(0,-1,0),
     #                   (0,0,1)],

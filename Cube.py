@@ -14,7 +14,7 @@ class Cube:
         else:
             self.pos = pos
         self.dim = len(self.pos)
-        self.dir = (0,0,1)
+        self.dir = (0,0,-1)
         
     def translate(self, toadd):
         self.pos = self.add(self.pos, toadd)
@@ -59,7 +59,7 @@ class Cube:
         return not isinstance(other, Cube) or not self.pos == other.pos
 
     def __str__(self):
-        return str(self.pos)
+        return "Cube[" + str(self.pos) + "]"
         
     def __hash__(self):
         return hash(self.pos)
