@@ -1,3 +1,9 @@
+# vector operations:
+# - elementwise addition
+# - elementwise subtraction
+# - multiplication by a scalar
+# - circular shift
+
 def add_t(a, b):
     '''
     a + b componentwise

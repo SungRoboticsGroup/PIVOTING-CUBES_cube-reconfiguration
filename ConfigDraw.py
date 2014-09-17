@@ -1,17 +1,22 @@
-# ConfigDraw2D class
+# ConfigDraw class
 #
-# draws a 2D configuration
+# draws a configuration of cubes
+#
+# originally: 7/15/2014 by James Bern
+# last modified: 9/4/2014 by Cynthia Sung
 
 # for drawing
 import pygame
 from pygame.locals import *
 import os
 
-class ConfigDraw2D:
-    """ConfigDraw2D class"""
+class ConfigDraw:
+    """ConfigDraw class"""
 
     # INITIALIZATION
-    def __init__(self, light=True):
+    def __init__(self, dim, light=True):
+        self.dim = dim
+        
         self.clock = None
         self.screen = None
         self.light_variant = light
@@ -28,7 +33,7 @@ class ConfigDraw2D:
         self.clock = pygame.time.Clock()
 
     # DRAWING
-    def draw_configuration(self, config, O_set=[], M_set=[], N_set=[], T_set=[], rotating_cubes=[]):
+    def draw_configuration(self, config, O_set=[], M_set=[], N_set=[], T_set=[], rotating_cubes=[], root = []):
         f = 1
         if self.light_variant:
             f = 2
@@ -63,7 +68,14 @@ class ConfigDraw2D:
             elif cube in T_set:
                 color = EXTREME
 
-            self.draw_cube(cube, color)
+            if cube in root:
+                color = EXTREME
+            
+            if self.dim == 2:
+                self.draw_cube(cube, color)
+            else:
+                #print "WARNING: 3D cubes not implemented"
+                self.draw_cube(cube, color)
 
         pygame.display.flip()
 
