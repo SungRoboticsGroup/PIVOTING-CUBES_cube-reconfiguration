@@ -6,6 +6,7 @@
 #
 # originally: 7/15/2014 by James Bern
 # last modified: 9/9/2014 by Cynthia Sung
+# On 8/20/2020, Daniel Feshbach began working with this file, adding this comment to do a test commit
 #
 # TODO: add collision detection for parallel algorithm
 #
