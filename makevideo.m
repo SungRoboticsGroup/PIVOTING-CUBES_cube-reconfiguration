@@ -1,7 +1,16 @@
+% parameters to change
+%  filename = string name of record file to read in
+%  savefile = true/false whether to save the result as an animation
+%  speedup = number of frames per cube motion
+%
+% line 22: savetype = extension of animation file to save
+% line 27: TRANSFORM_TYPE = type of cubes being animated
+% line 377: call to view changes the axes limits in 3D drawing
+
 function makevideo(filename, savefile, speedup)
 
 if ~exist('filename', 'var')
-    filename = 'stretch.record';
+    filename = 'c4_steps.record';
 end
 
 if ~exist('savefile', 'var')
