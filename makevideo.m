@@ -10,12 +10,12 @@ else
     dosave = savefile;
 end
 
-savetype = '.png';
+savetype = '.avi'; %could be .png to save series of images in a folder instead
 
 IS_PIVOT = 0;
 IS_SLIDE = 1;
 IS_STRETCH = 2;
-TRANSFORM_TYPE = IS_STRETCH;
+TRANSFORM_TYPE = IS_PIVOT;
 
 add_shadow = false;
 
@@ -52,7 +52,7 @@ niter = 0;
 
 %figure('units','normalized','position',[.5 0 .5 1])
 
-try
+%try
     if dosave
         [~,fpart] = fileparts(filename);
         savename = [fpart '3D_' num2str(speedup) 'x'];
@@ -80,11 +80,11 @@ try
     tline = fgetl(fid);
     tline = tline(2:end-1);
     theconfig = reshape(sscanf(tline, ['''Cube[(%d'  repmat(', %d', 1, dim-1) ')]'', ']), dim, [])';
-    slice = [];
+    slice = zeros(0,3);
     
     if dim == 2
         slice = theconfig;
-        theconfig = [];
+        theconfig = zeros(0,2);
     end
     
     %plotpos(theconfig, slice, [], dim)
@@ -185,10 +185,10 @@ try
         end
         
     end
-catch e
-    disp([e.stack(1).name ': ' num2str(e.stack(1).line)])
-    disp(e.message)
-end
+%catch e
+%    disp([e.stack(1).name ': ' num2str(e.stack(1).line)])
+%    disp(e.message)
+%end
 fclose(fid);
 
 if dosave
