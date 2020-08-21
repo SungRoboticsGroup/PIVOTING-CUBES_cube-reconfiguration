@@ -1,3 +1,11 @@
+% parameters to change
+%  filename = string name of record file to read in
+%  savefile = true/false whether to save the result as an animation
+%  speedup = number of frames per cube motion
+%
+% line 20: savetype = extension of animation file to save
+% line 26: TRANSFORM_TYPE = type of cubes being animated
+
 function makevideo(filename, savefile, speedup)
 
 if ~exist('filename', 'var')
@@ -15,7 +23,7 @@ savetype = '.png';
 IS_PIVOT = 0;
 IS_SLIDE = 1;
 IS_STRETCH = 2;
-TRANSFORM_TYPE = IS_STRETCH;
+TRANSFORM_TYPE = IS_PIVOT;
 
 add_shadow = false;
 
@@ -84,7 +92,7 @@ try
     
     if dim == 2
         slice = theconfig;
-        theconfig = [];
+        theconfig = zeros(0,2);
     end
     
     %plotpos(theconfig, slice, [], dim)
