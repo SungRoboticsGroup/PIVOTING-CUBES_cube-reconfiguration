@@ -315,7 +315,7 @@ class Configuration:
                     self.drawing.wait(500)
                 elif self.dosave:
                     self.file.write('Slice: ')
-                    self.file.write(str(comp))
+                    self.file.write(str(slice))
                     self.file.write('\n')
                 
                 # remove slice from slice graph V_S, G_S
@@ -1125,20 +1125,20 @@ class Configuration:
         else: #if self.has_cube has no neighbor above or below, it's safe to remove
             return None
         
+        # HACKY AND INEFFICIENT, at some point should rewrite using slice graph
         neighbor_cube = Cube(neighbor_pos)
         neighbor_slice = self.find_component(neighbor_cube, is2D=True)
         next_slice = self.find_component(next_cube, is2D=True)
         temp = Configuration(self.config.copy(), self.ispar, self.dodraw, self.dosave)
-        
-        ''' To check if neighbor_slice is the only grounding slice of a branch,
-        we can remove every module from next_slice adjacent to neighbor_slice,
-        then check if neighbor is connected to self.last_cube '''
+        # To check if neighbor_slice is the only grounding slice of a branch,
+        # we can remove every module from next_slice adjacent to neighbor_slice,
+        # then check if neighbor is connected to self.last_cube 
         for g in neighbor_slice: #called g because it might be a ground
             b = Cube((g[0],g[1],z_next)) #might be a base
             #remove the cube in neighbor_slice above or below
             if b in next_slice:
                 temp.remove(b)
-        if temp.pair_connected(neighbor_cube, next_cube):
+        if temp.pair_connected(neighbor_cube, self.last_cube):
             return None
         else:
             without_next_slice = Configuration(self.config.copy(), self.ispar, self.dodraw, self.dosave)
@@ -1146,25 +1146,34 @@ class Configuration:
             branch_set = without_next_slice.find_component(neighbor_cube, is2D=False).copy()
             branch = Configuration(branch_set, self.ispar, self.dodraw, self.dosave)
             branch.last_cube = neighbor_cube
-            return branch          
-
-
+            return branch
 
         '''
-        #Now we need to test if neighbor_cube is in a branch
+        # Test if neighbor_cube is in a branch:
         next_slice = self.find_component(next_cube, is2D=True)
         without_next_slice = Configuration(self.config.copy(), self.ispar, self.dodraw, self.dosave)
         without_next_slice.remove(next_slice)
         neighbor_component = without_next_slice.find_component(neighbor_cube, is2D=False)
         if self.last_cube in neighbor_component: 
             return None #because neighbor_cube is not in a branch
-        
-        #Now we know neighbor_component is a branch, so we need to check if neighbor_cube is in its only grounding slice.
-       
+
+        # Now we know neighbor_component is a branch, so we need to check if neighbor_cube is in its only grounding slice.
+        # If neighbor_component is only one slice (neighbor_slice), this must be the only grounding slice
+
+        # Otherwise if neighbor_component has multiple slices, neighbor_cube is its only grounding slice iff 
         neighbor_slice = self.find_component(neighbor_cube, is2D=True)
-        without_neighbor_slice = Configuration(self.config.copy(), self.ispar, self.dodraw, self.dosave)
-        without_neighbor_slice.remove(neighbor_slice)
+        global_without_neighbor_slice = Configuration(self.config.copy(), self.ispar, self.dodraw, self.dosave)
+        global_without_neighbor_slice.remove(neighbor_slice)
         '''
+
+        
+        
+        
+                  
+
+
+
+        
         
 
 
