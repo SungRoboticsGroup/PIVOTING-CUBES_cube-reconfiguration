@@ -1,7 +1,7 @@
 % parameters to change
 %  filename = string name of record file to read in
 %  savefile = true/false whether to save the result as an animation
-%  speedup = number of frames per cube motion
+%  speedup = number of frames generated per frame saved
 %
 % line 22: savetype = extension of animation file to save
 % line 27: TRANSFORM_TYPE = type of cubes being animated
@@ -32,7 +32,7 @@ if ~exist('speedup', 'var')
     speedup = 1;
 end
 
-resolution = 27;
+resolution = 10;
 
 CUBE_X = [-.5 -.5 .5 .5;
     -.5 -.5 .5 .5;
@@ -379,7 +379,7 @@ end
             axis equal
             %axis([-2 maxcoord(1)+2 -2 maxcoord(2)+2 -2 maxcoord(3)+2])
             %axis([-2 3 -2 2 -2 4]) % halfrotation
-            axis([-2 4 -2 2 -2 4]) % stretch
+            %axis([-2 4 -2 2 -2 4]) % stretch
             %axis([-4 4 -2 2 -2 6]) % infeasible
             %axis([-2 7 -2 7 -2 15]) % c4_steps
             axis off
