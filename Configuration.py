@@ -42,7 +42,7 @@ class Configuration:
 
         # variables for parallel alg
         self.buff_timer = Configuration.BUFF
-        self.next_cube = []
+        self.nextcube_info = []
         self.next_checkpoint = None
 
         # the cubes
@@ -223,36 +223,46 @@ class Configuration:
             
 
     # RECONFIGURATION ALGORITHM
-    def flatten(self, whole=None, root = None):
+    def flatten(self, branch=None, root = None):
         ''' 
-        whole is the entire global configuration: defaults to self
-        self is the portion of whole being deconstructed by this call to flatten:
-            either it is whole, or it is a branch in whole
-         '''
-        if whole == None:
-            whole = self
+        branch is the local branch being deconstructed by this call
+        self is the whole configuration
+        '''
+        print("configuration size: "+str(len(self.config)))
+        if branch:                  # If we're operating on a branch, 
+            for c in branch.config:         # it should start out as a subset of the global configuration
+                assert(c in self.config)
+            print("branch size: "+str(len(branch.config)))
 
         self.slice_root = root
         self.Nsteps = 0
         
-        if whole.dodraw:
-            whole.init_draw()
-        elif whole.dosave :
-            whole.file = open(whole.save_prefix + '_steps.record', 'w')
-            whole.file.write(str(whole.dim))
-            whole.file.write('\n')
-            whole.file.write(str(whole))
-            whole.file.write('\n')
-
-
+        if self.dodraw:
+            self.init_draw()
+        elif self.dosave :
+            self.file = open(self.save_prefix + '_steps.record', 'w')
+            self.file.write(str(self.dim))
+            self.file.write('\n')
+            self.file.write(str(self))
+            self.file.write('\n')
+        
         check_valid = self.verify_configuration()
         if check_valid != None:
             print("Configuration is invalid!")
-            if whole.dodraw:
-                whole.drawing.draw_configuration(whole.config, [check_valid])
-                while not whole.drawing.check_draw_close(): pass
-                whole.close_draw()
+            if self.dodraw:
+                self.drawing.draw_configuration(self.config, [check_valid])
+                while not self.drawing.check_draw_close(): pass
+                self.close_draw()
             return False
+        if branch:
+            check_branch_valid = branch.verify_configuration()
+            if check_branch_valid != None:
+                print("Configuration is invalid!")
+                if branch.dodraw:
+                    branch.drawing.draw_configuration(branch.config, [check_branch_valid])
+                    while not branch.drawing.check_draw_close(): pass
+                    branch.close_draw()
+                return False
 
         print("Configuration valid!")
 
@@ -261,41 +271,33 @@ class Configuration:
             success = self.flatten2D()
         else:
             success = True
-            V_S, G_S = self.slice_graph()
+            if branch == None: #at outermost call, construct entire slice graph
+                V_S, G_S = self.slice_graph()
+            else: #in recursive calls, only need slice graph of branch
+                V_S, G_S = branch.slice_graph()
 
-            nextslice = True
-            while nextslice :
-                #select slice (comp) with id cid, set comp.slice_root
-                comp, cid = self.find_extreme_slice(V_S, G_S)
-
-                self.slice_root = comp.slice_root 
-                # When deconstructing the 2D slice, need to make sure to do the root last
-
-                self.extreme_of_slice = comp.extreme_of_slice #self.find_extreme_cube(z)
-                z = self.slice_root[2] 
-
-                self.classify_configuration(z) #set self.next_cube
-
-                branch = self.branch_to_remove()
-                if branch != None:
-                    branch.flatten(whole=whole)
-
-                if self.dodraw:
-                    #self.drawing.draw_configuration(self.config, self.O_set, self.M_set, self.N_set, self.T_set, self.rotating_cubes, [self.slice_root])
-                    self.drawing.wait(500)
-                elif self.dosave:
-                    self.file.write('Slice: ')
-                    self.file.write(str(comp))
-                    self.file.write('\n')
-                                    
+            ########## LOOP OVER SLICES ##########
+            while len(V_S)>0:              #used to be while nextslice :
+                # Select slice to deconstruct, set slice.slice_root and slice.extreme_in_slice
+                if branch:  # relies on branch.last_module having been set properly 
+                            # (which branch_to_remove should have done when constructing branch)
+                    slice, cid = branch.find_extreme_slice(V_S, G_S) 
+                else:
+                    slice, cid = self.find_extreme_slice(V_S, G_S)
                 
-
-                # move self.next_cube next to self.extreme_of_slice (the 2D extreme of this slice) and put it on self.T_set
-                done_relocate = self.relocate_next_to_tail_2D() 
+                ########## MOVE CUBES IN SLICE TO THE GLOBAL TAIL    ##########
+                ########## Pausing to remove branches as necessary   ##########
+                for tcube in slice.slice_deconstruction_order():
+                    assert(tcube in self.config)
+                    # If there's an inner branch that has to be removed before tcube, remove it
+                    next_branch = self.branch_to_remove(next_cube=tcube) 
+                    if next_branch:
+                        self.flatten(branch=next_branch)
+                        #check to ensure branch has been removed:
+                        for c in next_branch: 
+                            assert(not c in self.config)
                     
-                while not done_relocate:
-                    # move to 3D extreme
-                    tcube = self.T_set.pop() #the cube we just put on the 2D tail location
+                    # Move tcube to the global tail:
                     self.config.remove(tcube)
                     tpath = self.find_path(tcube.pos, add_t(self.last_cube.pos, (0,0,len(self.T_set)+1)))
                     tcube = self.rotate_cube_along_path(tcube, tpath)
@@ -306,59 +308,15 @@ class Configuration:
                     else :
                         self.config.add(tcube)
                         self.T_set.append(tcube) #it is now on the 3D tail
+                ################################################################
 
-                    self.classify_configuration(z)
-                    branch = self.branch_to_remove()
-                    if branch != None:
-                        branch.flatten(whole=whole)
-        
-                    if self.dodraw:
-                        #self.drawing.draw_configuration(comp.config, self.O_set, self.M_set, self.N_set, self.T_set, self.rotating_cubes, [self.slice_root])
-                        self.drawing.draw_configuration(self.config, self.O_set, self.M_set, self.N_set, self.T_set, self.rotating_cubes, [self.slice_root])
-
-                    done_relocate = self.relocate_next_to_tail_2D()
-
-                    if done_relocate == None :
-                        success = False
-                        done_relocate = True
-                        nextslice = False
-                        break
-
-                if not nextslice :
-                    break
-                
-
-                # take care of the chain from the root to the extreme cube
-                # NOTE: root is the last cube on the chain that maintains connectivity
-                while self.extreme_of_slice != None:
-                    n = self.find_neighbors(self.extreme_of_slice, True)
-                    
-                    # move to 3D extreme
-                    tcube = self.extreme_of_slice
-
-                    self.next_cube = tcube
-                    branch = self.branch_to_remove()
-                    if branch != None:
-                        branch.flatten(whole=whole)
-                    
-                    self.config.remove(tcube)
-                    tpath = self.find_path(tcube.pos, add_t(self.last_cube.pos, (0,0,len(self.T_set)+1)))
-                    tcube = self.rotate_cube_along_path(tcube, tpath)
-                    if tcube == None :
-                        nextslice = False
-                        break
-                    else :
-                        self.config.add(tcube)
-                        self.T_set.append(tcube)
-                        
-                    # get neighbor; there should be at most one
-                    if not n or n == self.last_cube:
-                        self.extreme_of_slice = None
-                    else :
-                        self.extreme_of_slice = n[0]
-
-                if not nextslice :
-                    break
+                if self.dodraw:
+                    #self.drawing.draw_configuration(self.config, self.O_set, self.M_set, self.N_set, self.T_set, self.rotating_cubes, [self.slice_root])
+                    self.drawing.wait(500)
+                elif self.dosave:
+                    self.file.write('Slice: ')
+                    self.file.write(str(comp))
+                    self.file.write('\n')
                 
                 # remove slice from slice graph V_S, G_S
                 for i in G_S :
@@ -367,9 +325,8 @@ class Configuration:
                         G_S[i].remove(d)
                 G_S.pop(cid)
                 V_S.pop(cid)
-                if not G_S :
-                    nextslice = False
-
+            ########## END OF LOOP OVER SLICES ##########
+            
         if self.dodraw:
             while not self.drawing.check_draw_close(): pass
         
@@ -378,9 +335,11 @@ class Configuration:
             self.file.close()
             
         return success
+
+                
     
     def flatten2D(self):
-        self.classify_configuration()
+        self.classify_slice_cubes()
         if self.dodraw:
             self.drawing.draw_configuration(self.config, self.O_set, self.M_set, self.N_set, self.T_set, self.rotating_cubes, [self.slice_root])
             self.drawing.wait(500)
@@ -392,7 +351,7 @@ class Configuration:
             
             # update_configuration is actually what hangs the program
             # but we can't draw until we finish it.
-            self.classify_configuration()
+            self.classify_slice_cubes()
 
             if self.dodraw:
                 self.drawing.draw_configuration(self.config, self.O_set, self.M_set, self.N_set, self.T_set, self.rotating_cubes, [self.slice_root])
@@ -402,7 +361,7 @@ class Configuration:
         if done_relocate == None: # user quit middle of relocation
             done_relocate = False
         return done_relocate
-
+    
     def relocate_next_to_tail_2D(self):
         do_next_step = True
         while do_next_step:
@@ -433,12 +392,12 @@ class Configuration:
         # Stage next_cube or next_P4 to run (if buff timer expended)
         # Wait on/decrement timer
         not_reclassify = True
-        if (self.next_checkpoint==None and self.next_cube) or (self.rotating_cubes and self.rotating_cubes[-1].pos == self.next_checkpoint):
+        if (self.next_checkpoint==None and self.nextcube_info) or (self.rotating_cubes and self.rotating_cubes[-1].pos == self.next_checkpoint):
             # Stage cubes
             # Standard tail relocation
-            if self.next_cube:
+            if self.nextcube_info:
                 # get next cube to move
-                thecube = self.next_cube.pop(0)
+                thecube = self.nextcube_info.pop(0)
                 nc = thecube[0]   # cube id
                 chk = thecube[1]  # checkpoint
 
@@ -482,7 +441,7 @@ class Configuration:
             self.rotating_cubes = next_rotating_cubes
             if self.dosave and not self.dodraw :
                 self.file.write('\n')
-        elif not self.next_cube:
+        elif not self.nextcube_info:
             #print ("We made it.")
             return None
         return not_reclassify
@@ -738,10 +697,60 @@ class Configuration:
 
             return Cube((Mx, My))
 
-    def classify_configuration(self, z = 0):
+     
+    def slice_deconstruction_order(self):
+        ''' 
+        Returns a list of the cubes in the slice containing self.slice_root,
+        in order of deconstruction.
         '''
-        Basically doing NextModule2D: sets self.next_cube
-        TODO: examine how it uses self.slice_root
+        z = self.slice_root[2]
+        slice_set = self.find_component(self.slice_root, is2D=True)
+        assert(self.extreme_of_slice in slice_set)
+        slice = Configuration(slice_set.copy(), self.ispar, self.dodraw, self.dosave)
+        slice.slice_root = self.slice_root
+        slice.extreme_of_slice = self.extreme_of_slice
+
+        removed = []
+        #Calculate N_set, pick next_cube from it
+        slice.classify_slice_cubes(z) 
+        while(len(slice.N_set)>0): #while N_set is nonempty
+            next_cube = slice.nextcube_info[0][0]
+            assert(isinstance(next_cube, Cube))
+            #print(next_cube)
+            assert(next_cube in slice.config)
+            #remove next_cube
+            removed.append(next_cube) 
+            slice.remove(next_cube) 
+            #recalculate N_set and next_cube
+            slice.nextcube_info = None #have to reset so classify_slice_cubes will recalculate it
+            slice.classify_slice_cubes(z) 
+        
+        # Now N_set is empty, i.e., slice is a chain from slice_root to extreme_of_slice
+        # Remove from extreme_of_slice to slice_root
+        # Get neighbors (should be at most 1) of extreme_of_slice
+        neighbors = slice.find_neighbors(slice.extreme_of_slice, is2D=True)
+        # Remove extreme_of_slice
+        removed.append(slice.extreme_of_slice)
+        slice.remove(slice.extreme_of_slice)
+        while(len(neighbors)==1): # trace the neighbor chain back to slice_root
+            neighbor = neighbors[0]
+            slice.extreme_of_slice = neighbor
+            # Get neighbors (should be at most 1) of new extreme_of_slice
+            neighbors = slice.find_neighbors(slice.extreme_of_slice, is2D=True)
+            # Remove extreme_of_slice
+            removed.append(slice.extreme_of_slice)
+            slice.remove(slice.extreme_of_slice)
+        
+        #verify we've removed all cubes
+        assert(len(slice.config)==0) 
+        assert(len(removed)==len(slice_set))
+        return removed
+
+    def classify_slice_cubes(self, z = 0): #formerly classify_configuration
+        '''
+        Sets self.nextcube_info appropriately for the slice of self.slice_root 
+        (which should be in the same slice as self.extreme_of_slice),
+        unless the slice is already the chain from self.slice_root to self.extreme_of_slice
         '''
         # calculate O_set
         self.O_set = []
@@ -762,7 +771,7 @@ class Configuration:
             virtual_cube, _ = self.rotate(virtual_cube, (0,0,-1), virtual=True)
 
         # FORNOW: convention, shows up in step_configuration
-        # Basically, we don't want to look in the tail
+        # Basically, we don't want to look in the tail or at self.last_cube
         # for cubes to move
         if self.last_cube in self.O_set:
             self.O_set.remove(self.extreme_of_slice)
@@ -842,7 +851,7 @@ class Configuration:
             if not splitting:
                 self.N_set.append(cube)
 
-                if not self.next_cube:
+                if not self.nextcube_info:
                     # compute checkpoint
                     if self.ispar:
                         chk = cube.pos
@@ -865,13 +874,13 @@ class Configuration:
                         chk = (chk[0], chk[1], z)
                     #print "NEXT NC:", cube
                     #print "NEXT CHECKPOINT:", chk
-                    self.next_cube = [(cube,chk)]
+                    self.nextcube_info = [(cube,chk)]
             else:
                 search_results = self.P_search(cube)
                 P = search_results
                 if search_results != None and not self.slice_root in P :
                     self.P_set.append(P)
-                    if not self.next_cube:
+                    if not self.nextcube_info:
                         # compute checkpoint
                         if self.ispar:
                             endTail = False
@@ -898,16 +907,19 @@ class Configuration:
                         #print "NEXT P:", cube, self.extreme_of_slice
                         #print "NEXT CHECKPOINT:", chk
                         if self.dim > 2 :
-                            self.next_cube = [(P[0],chk)]
-                            #self.next_cube = [(P[i],add_t(chk,(i if endTail else 0,0,0))) for i in range(len(P))]
+                            self.nextcube_info = [(P[0],chk)]
+                            #self.nextcube_info = [(P[i],add_t(chk,(i if endTail else 0,0,0))) for i in range(len(P))]
                         else :
-                            self.next_cube = [(P[i],add_t(chk,(i if endTail else 0,0))) for i in range(len(P))]
-            
+                            self.nextcube_info = [(P[i],add_t(chk,(i if endTail else 0,0))) for i in range(len(P))]
+        
+    def check_cube_count(self):
+        print("self.config_size: "+str(self.config_size))
+        print("len(self.config): "+str(len(self.config)))
+        print("len(self.rotating_cubes): "+str(len(self.rotating_cubes)))
 
         # check that we haven't done anything crazy
         assert len(self.config)+len(self.rotating_cubes) == self.config_size
-
-    
+        
     
     def find_extreme_slice(self, V_S, G_S):
         '''
@@ -1090,19 +1102,19 @@ class Configuration:
             print("unrecognized type for other in Configuration.remove(other)")
             assert(False)
     
-    def branch_to_remove(self):
+    def branch_to_remove(self, next_cube):
         ''' Return the branch we need to remove (recurse flatten on)
-        before removing self.next_cube (or None if we can remove 
-        self.next_cube next), as a Configuration with branch.last_cube 
-        set to the ground module of self.next_cube
+        before removing next_cube (or None if we can remove 
+        next_cube next), as a Configuration with branch.last_cube 
+        set to the ground module of next_cube
         
-        Pause condition: self.next_cube has a neighbor n in a branch, 
+        Pause condition: next_cube has a neighbor n in a branch, 
         AND the slice containing n is the only grounding slice of the 
         branch adjacent to what remains of the current slice 
         '''
-        z_next = self.next_cube[2]
-        above_next = (self.next_cube[0], self.next_cube[1], z_next+1)
-        below_next = (self.next_cube[0], self.next_cube[1], z_next-1)
+        z_next = next_cube[2]
+        above_next = (next_cube[0], next_cube[1], z_next+1)
+        below_next = (next_cube[0], next_cube[1], z_next-1)
         assert(not (self.has_cube(above_next) and self.has_cube(below_next))) #because then then the current slice wouldn't be locally extreme
         if self.has_cube(above_next):
             neighbor_pos = above_next
@@ -1115,7 +1127,7 @@ class Configuration:
         
         neighbor_cube = Cube(neighbor_pos)
         neighbor_slice = self.find_component(neighbor_cube, is2D=True)
-        next_slice = self.find_component(self.next_cube, is2D=True)
+        next_slice = self.find_component(next_cube, is2D=True)
         temp = Configuration(self.config.copy(), self.ispar, self.dodraw, self.dosave)
         
         ''' To check if neighbor_slice is the only grounding slice of a branch,
@@ -1126,13 +1138,13 @@ class Configuration:
             #remove the cube in neighbor_slice above or below
             if b in next_slice:
                 temp.remove(b)
-        if temp.in_same_component(neighbor_cube, self.next_cube):
+        if temp.pair_connected(neighbor_cube, next_cube):
             return None
         else:
             without_next_slice = Configuration(self.config.copy(), self.ispar, self.dodraw, self.dosave)
             without_next_slice.remove(next_slice)
             branch_set = without_next_slice.find_component(neighbor_cube, is2D=False).copy()
-            branch = Configuration(slice_set, self.ispar, self.dodraw, self.dosave)
+            branch = Configuration(branch_set, self.ispar, self.dodraw, self.dosave)
             branch.last_cube = neighbor_cube
             return branch          
 
@@ -1140,7 +1152,7 @@ class Configuration:
 
         '''
         #Now we need to test if neighbor_cube is in a branch
-        next_slice = self.find_component(self.next_cube, is2D=True)
+        next_slice = self.find_component(next_cube, is2D=True)
         without_next_slice = Configuration(self.config.copy(), self.ispar, self.dodraw, self.dosave)
         without_next_slice.remove(next_slice)
         neighbor_component = without_next_slice.find_component(neighbor_cube, is2D=False)
@@ -1335,8 +1347,8 @@ def main():
     #c = Configuration('halfbug.config', True, False, True, 'halfbug_par')
     #c = Configuration('5.config', True, True, False, '')
     
-    c = Configuration(testname+'.csv', ispar=False, dodraw=True, dosave=True, saveprefix=testname)
-    c.show()
+    c = Configuration(testname+'.csv', ispar=False, dodraw=False, dosave=True, saveprefix=testname)
+    #c.show()
     c.flatten()
     #c2 = Configuration([(-ctemp[1],-ctemp[0]) for ctemp in c.config],
     #                   True, False, True, '5_par')
