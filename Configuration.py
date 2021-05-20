@@ -271,10 +271,10 @@ class Configuration:
             success = self.flatten2D()
         else:
             success = True
-            if branch == None: #at outermost call, construct entire slice graph
-                V_S, G_S = self.slice_graph()
-            else: #in recursive calls, only need slice graph of branch
+            if branch:
                 V_S, G_S = branch.slice_graph()
+            else:
+                V_S, G_S = self.slice_graph()
 
             ########## LOOP OVER SLICES ##########
             while len(V_S)>0:              #used to be while nextslice :
@@ -292,10 +292,8 @@ class Configuration:
                     # If there's an inner branch that has to be removed before tcube, remove it
                     next_branch = self.branch_to_remove(next_cube=tcube) 
                     if next_branch:
+                        print("next_branch: " + str(next_branch))
                         self.flatten(branch=next_branch)
-                        #check to ensure branch has been removed:
-                        for c in next_branch: 
-                            assert(not c in self.config)
                     
                     # Move tcube to the global tail:
                     self.config.remove(tcube)
@@ -331,7 +329,7 @@ class Configuration:
             while not self.drawing.check_draw_close(): pass
         
             self.close_draw()
-        elif self.dosave :
+        elif self.dosave and not branch :
             self.file.close()
             
         return success
@@ -681,6 +679,8 @@ class Configuration:
     # CONFIGURATION ANALYSIS
     def find_extreme_cube(self, Mz = None, zDirection="+"):
         assert(zDirection in ["+", "-"])
+        if len(self.config)==0:
+            return None
         if self.dim > 2 :
             if Mz == None:
                 if zDirection=="+":
@@ -712,38 +712,24 @@ class Configuration:
 
         removed = []
         #Calculate N_set, pick next_cube from it
-        slice.classify_slice_cubes(z) 
-        while(len(slice.N_set)>0): #while N_set is nonempty
-            next_cube = slice.nextcube_info[0][0]
-            assert(isinstance(next_cube, Cube))
-            #print(next_cube)
-            assert(next_cube in slice.config)
-            #remove next_cube
-            removed.append(next_cube) 
-            slice.remove(next_cube) 
-            #recalculate N_set and next_cube
+
+        while(len(slice.config)>0):
             slice.nextcube_info = None #have to reset so classify_slice_cubes will recalculate it
             slice.classify_slice_cubes(z) 
-        
-        # Now N_set is empty, i.e., slice is a chain from slice_root to extreme_of_slice
-        # Remove from extreme_of_slice to slice_root
-        # Get neighbors (should be at most 1) of extreme_of_slice
-        neighbors = slice.find_neighbors(slice.extreme_of_slice, is2D=True)
-        # Remove extreme_of_slice
-        removed.append(slice.extreme_of_slice)
-        slice.remove(slice.extreme_of_slice)
-        while(len(neighbors)==1): # trace the neighbor chain back to slice_root
-            neighbor = neighbors[0]
-            slice.extreme_of_slice = neighbor
-            # Get neighbors (should be at most 1) of new extreme_of_slice
-            neighbors = slice.find_neighbors(slice.extreme_of_slice, is2D=True)
-            # Remove extreme_of_slice
-            removed.append(slice.extreme_of_slice)
-            slice.remove(slice.extreme_of_slice)
-        
-        #verify we've removed all cubes
-        assert(len(slice.config)==0) 
-        assert(len(removed)==len(slice_set))
+            if (len(slice.N_set)==0): #if N_set is empty
+                # slice is a chain; choose extreme_of_slice
+                removed.append(slice.extreme_of_slice)
+                slice.remove(slice.extreme_of_slice)
+                slice.extreme_of_slice = slice.find_extreme_cube()
+            else:
+                next_cube = slice.nextcube_info[0][0]
+                assert(isinstance(next_cube, Cube))
+                #print(next_cube)
+                assert(next_cube in slice.config)
+                #remove next_cube
+                removed.append(next_cube) 
+                slice.remove(next_cube)
+
         return removed
 
     def classify_slice_cubes(self, z = 0): #formerly classify_configuration
@@ -1143,8 +1129,8 @@ class Configuration:
         else:
             without_next_slice = Configuration(self.config.copy(), self.ispar, self.dodraw, self.dosave)
             without_next_slice.remove(next_slice)
-            branch_set = without_next_slice.find_component(neighbor_cube, is2D=False).copy()
-            branch = Configuration(branch_set, self.ispar, self.dodraw, self.dosave)
+            branch_set = without_next_slice.find_component(neighbor_cube, is2D=False)
+            branch = Configuration(branch_set.copy(), self.ispar, self.dodraw, self.dosave)
             branch.last_cube = neighbor_cube
             return branch
 
