@@ -292,11 +292,14 @@ class Configuration:
                     # If there's an inner branch that has to be removed before tcube, remove it
                     next_branch = self.branch_to_remove(next_cube=tcube) 
                     if next_branch:
-                        sids = slice_ids_in(next_branch.config, V_S)
+                        slice_ids = slice_ids_in(next_branch.config, V_S)
+                        print("slice ids before branch removal = " + str(V_S.keys()))
+                        print("next_branch slice ids: " + str(slice_ids))
                         print("next_branch: " + str(next_branch))
                         self.flatten(branch=next_branch)
-                        for sid in sids:
-                            V_S, G_S = remove_slice(V_S, G_S, slice_id=sid)
+                        for slice_id in slice_ids:
+                            remove_slice(V_S, G_S, slice_id)
+                        print("slice ids remaining after branch removal = " + str(V_S.keys()))
                     
                     # Move tcube to the global tail:
                     self.config.remove(tcube)
@@ -319,7 +322,13 @@ class Configuration:
                     self.file.write(str(slice))
                     self.file.write('\n')
                 
-                V_S, G_S = remove_slice(V_S, G_S, slice_id=cid)
+                # remove slice from slice graph V_S, G_S
+                for i in G_S :
+                    todelete = [c for c in G_S[i] if c[0]==cid]
+                    for d in todelete :
+                        G_S[i].remove(d)
+                G_S.pop(cid)
+                V_S.pop(cid)
             ########## END OF LOOP OVER SLICES ##########
             
         if self.dodraw:
@@ -1046,7 +1055,6 @@ class Configuration:
             G_S[ncomp] = neigh
             ncomp += 1
         return (V_S, G_S)
-    
 
     def slice2D(self, z):
         return Configuration([c for c in self.config if c[2]==z])
@@ -1345,8 +1353,8 @@ def remove_slice(V_S, G_S, slice_id):
         todelete = [c for c in G_S[i] if c[0]==slice_id]
         for d in todelete :
             G_S[i].remove(d)
-            G_S.pop(slice_id)
-            V_S.pop(slice_id)
+    G_S.pop(slice_id)
+    V_S.pop(slice_id)
     return (V_S, G_S)
 
 def main():
@@ -1395,6 +1403,6 @@ def main():
     #c4.show()
     #c2.flatten()
 
-    print("done")
+    print "done"
 
 if __name__ == '__main__': main()
