@@ -288,6 +288,8 @@ class Configuration:
                 ########## MOVE CUBES IN SLICE TO THE GLOBAL TAIL    ##########
                 ########## Pausing to remove branches as necessary   ##########
                 for tcube in slice.slice_deconstruction_order():
+                    if tcube == self.last_cube:
+                        break #self.last_cube is already the start of the tail, don't want to move it to the end
                     assert(tcube in self.config)
                     # If there's an inner branch that has to be removed before tcube, remove it
                     next_branch = self.branch_to_remove(next_cube=tcube) 
@@ -765,8 +767,8 @@ class Configuration:
         # FORNOW: convention, shows up in step_configuration
         # Basically, we don't want to look in the tail or at self.last_cube
         # for cubes to move
-        if self.last_cube in self.O_set:
-            self.O_set.remove(self.extreme_of_slice)
+        if self.last_cube in self.O_set: 
+            self.O_set.remove(self.extreme_of_slice) #should this be last_cube instead of extreme_of_slice???
         for cube_t in self.T_set:
             if cube_t in self.O_set:
                 self.O_set.remove(cube_t)
