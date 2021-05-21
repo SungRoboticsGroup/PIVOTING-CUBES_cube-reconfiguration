@@ -292,8 +292,11 @@ class Configuration:
                     # If there's an inner branch that has to be removed before tcube, remove it
                     next_branch = self.branch_to_remove(next_cube=tcube) 
                     if next_branch:
+                        sids = slice_ids_in(next_branch.config, V_S)
                         print("next_branch: " + str(next_branch))
                         self.flatten(branch=next_branch)
+                        for sid in sids:
+                            V_S, G_S = remove_slice(V_S, G_S, slice_id=sid)
                     
                     # Move tcube to the global tail:
                     self.config.remove(tcube)
@@ -316,13 +319,7 @@ class Configuration:
                     self.file.write(str(slice))
                     self.file.write('\n')
                 
-                # remove slice from slice graph V_S, G_S
-                for i in G_S :
-                    todelete = [c for c in G_S[i] if c[0]==cid]
-                    for d in todelete :
-                        G_S[i].remove(d)
-                G_S.pop(cid)
-                V_S.pop(cid)
+                V_S, G_S = remove_slice(V_S, G_S, slice_id=cid)
             ########## END OF LOOP OVER SLICES ##########
             
         if self.dodraw:
@@ -924,6 +921,7 @@ class Configuration:
         zMax = max([c[2] for c in self.config])
         zMin = min([c[2] for c in self.config])
 
+        print("Slices remaining: " + str([str(cid) for cid in V_S.keys()]))
         if len(V_S) == 1 :
             for cid in V_S.keys() : break
             comp = V_S[cid]
@@ -933,7 +931,7 @@ class Configuration:
             #find a globally extreme slice not containing self.last_cube
             for cid in V_S.keys():
                 zHere = next(iter(V_S[cid].config))[2]
-                if (zHere==zMin or zHere==zMax) and not self.last_cube in V_S[cid].config:
+                if (zHere==zMin or zHere==zMax) and (not self.last_cube in V_S[cid].config):
                     comp = V_S[cid]
                     break
                 '''
@@ -1048,6 +1046,7 @@ class Configuration:
             G_S[ncomp] = neigh
             ncomp += 1
         return (V_S, G_S)
+    
 
     def slice2D(self, z):
         return Configuration([c for c in self.config if c[2]==z])
@@ -1332,6 +1331,23 @@ class Configuration:
             search_dict = {U:LR, D:LR, R:UD, L:UD}
         return search_dict
 
+def slice_ids_in(subconfig, V_S):
+    ids = []
+    for slice_id, slice in V_S.items():
+        cube_in_slice = next(iter(slice.config))
+        if cube_in_slice in subconfig:
+            ids.append(slice_id)
+    return ids
+
+def remove_slice(V_S, G_S, slice_id):
+    # remove slice from slice graph V_S, G_S
+    for i in G_S :
+        todelete = [c for c in G_S[i] if c[0]==slice_id]
+        for d in todelete :
+            G_S[i].remove(d)
+            G_S.pop(slice_id)
+            V_S.pop(slice_id)
+    return (V_S, G_S)
 
 def main():
     testname = 'stalagmite_and_stalactite'
@@ -1379,6 +1395,6 @@ def main():
     #c4.show()
     #c2.flatten()
 
-    print "done"
+    print("done")
 
 if __name__ == '__main__': main()
