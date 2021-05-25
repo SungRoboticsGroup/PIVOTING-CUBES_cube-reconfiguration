@@ -11,6 +11,8 @@
 # TODO: add collision detection for parallel algorithm
 #
 
+from __future__ import absolute_import
+from __future__ import print_function
 from Cube import Cube
 from ConfigDraw import ConfigDraw
 from vector_op import *
@@ -23,6 +25,8 @@ import time
 import pickle
 from pprint import pprint
 import csv
+import six
+from six.moves import range
 
 class Configuration:
     """Configuration class"""
@@ -90,7 +94,7 @@ class Configuration:
                     input_config = pickle.load(g)
                 self.init_configuration(input_config, False)
             except IOError:
-                print "config file not found"
+                print("config file not found")
                 return
         elif isinstance(init_config, list) or isinstance(init_config, set):
             for temp in init_config: break
@@ -125,7 +129,7 @@ class Configuration:
         tryAgain = True
         
         while tryAgain :
-            print 'trying'
+            print('trying')
             # loop-erased random walk
             if dim == 2 :
                 currentnode = (0,0)
@@ -138,7 +142,7 @@ class Configuration:
             currN = 1
             
             while currN < N:
-                newneigh = random.choice(range(len(neighdir)))
+                newneigh = random.choice(list(range(len(neighdir))))
                 neighnode = add_t(currentnode, neighdir[newneigh])
                 if neighnode not in config :
                     config.add(neighnode)
@@ -198,9 +202,9 @@ class Configuration:
 
             # move blocks
             for _ in range(N*N) :
-                posfrom = random.choice(range(len(config)))
+                posfrom = random.choice(list(range(len(config))))
 
-                posto = random.choice(range(len(neigh)))
+                posto = random.choice(list(range(len(neigh))))
 
                 ctemp = list(config)
                 ctemp[posfrom] = neigh[posto]
@@ -228,18 +232,18 @@ class Configuration:
         branch is the local branch being deconstructed by this call
         self is the whole configuration
         '''
-        print("configuration size: "+str(len(self.config)))
+        print(("configuration size: "+str(len(self.config))))
         if branch:                  # If we're operating on a branch, 
             for c in branch.config:         # it should start out as a subset of the global configuration
                 assert(c in self.config)
-            print("branch size: "+str(len(branch.config)))
+            print(("branch size: "+str(len(branch.config))))
 
         self.slice_root = root
         self.Nsteps = 0
         
         if self.dodraw:
             self.init_draw()
-        elif self.dosave :
+        elif self.dosave and branch==None :
             self.file = open(self.save_prefix + '_steps.record', 'w')
             self.file.write(str(self.dim))
             self.file.write('\n')
@@ -295,13 +299,13 @@ class Configuration:
                     next_branch = self.branch_to_remove(next_cube=tcube) 
                     if next_branch:
                         slice_ids = slice_ids_in(next_branch.config, V_S)
-                        print("slice ids before branch removal = " + str(V_S.keys()))
-                        print("next_branch slice ids: " + str(slice_ids))
-                        print("next_branch: " + str(next_branch))
+                        print(("slice ids before branch removal = " + str(list(V_S.keys()))))
+                        print(("next_branch slice ids: " + str(slice_ids)))
+                        print(("next_branch: " + str(next_branch)))
                         self.flatten(branch=next_branch)
                         for slice_id in slice_ids:
                             remove_slice(V_S, G_S, slice_id)
-                        print("slice ids remaining after branch removal = " + str(V_S.keys()))
+                        print(("slice ids remaining after branch removal = " + str(list(V_S.keys()))))
                     
                     # Move tcube to the global tail:
                     self.config.remove(tcube)
@@ -411,7 +415,7 @@ class Configuration:
                     not_reclassify = False
                 
                 if nc not in self.config :
-                    print nc
+                    print(nc)
                     assert nc in self.config
                 self.rotating_cubes.append(nc)
                 self.config.remove(nc)
@@ -461,7 +465,7 @@ class Configuration:
 
             newpos, rotaxis = tpath.pop()
             if actpos != newpos :
-                print "theres a problem", actpos, newpos
+                print("theres a problem", actpos, newpos)
             #else :
             #   print actpos, newpos
             actpos, rotneigh = self.rotate(actpos, rotaxis)
@@ -499,7 +503,7 @@ class Configuration:
             cpos = c0.pos
 
             # major axes and minor axes
-            for (major, minors) in search_dict.iteritems():
+            for (major, minors) in six.iteritems(search_dict):
                 for minor in minors:
                     # check each rule
                     for i in range(len(RULES)):
@@ -530,7 +534,7 @@ class Configuration:
             Plen = 3
         P = self.P(Plen)
 
-        for (major, minors) in search_dict.iteritems():
+        for (major, minors) in six.iteritems(search_dict):
             for minor in minors:
                 # we found an instance of P_i
                 if self.has_instance(P, m1, major, minor):
@@ -594,8 +598,7 @@ class Configuration:
             d9 = add_t(sca_t(i, -1), sca_t(j, -1))
 
             # inelegant translate
-            c1,c2,c3,c4,c5,c6,c7,c8,c9 = map(lambda di: (add_t(c0, di)),
-                    (d1,d2,d3,d4,d5,d6,d7,d8,d9))
+            c1,c2,c3,c4,c5,c6,c7,c8,c9 = [(add_t(c0, di)) for di in (d1,d2,d3,d4,d5,d6,d7,d8,d9)]
             if virtual:
                 assert cube not in self.config
 
@@ -641,7 +644,7 @@ class Configuration:
         # returns the path in backwards order
         
         # BFS search
-        print "from " + str(frompos) + " to " + str(topos)
+        print("from " + str(frompos) + " to " + str(topos))
         parents = {frompos: 0}
         nextcheck = [frompos]
         axesdict = self.search_dir()
@@ -849,7 +852,7 @@ class Configuration:
                     # compute checkpoint
                     if self.ispar:
                         chk = cube.pos
-                        for _ in xrange(Configuration.BUFF+3):
+                        for _ in range(Configuration.BUFF+3):
                             newchk, _ = self.rotate(chk, cube.dir)
                             if newchk[1] == self.extreme_of_slice[1]:
                                 diff0 = newchk[0]-self.extreme_of_slice[0]-len(self.T_set)
@@ -879,7 +882,7 @@ class Configuration:
                         if self.ispar:
                             endTail = False
                             chk = cube.pos
-                            for _ in xrange(Configuration.BUFF+3):
+                            for _ in range(Configuration.BUFF+3):
                                 newchk, _ = self.rotate(chk, cube.dir)
                                 if newchk[1] == self.extreme_of_slice[1]:
                                     diff0 = newchk[0]-self.extreme_of_slice[0]-len(self.T_set)
@@ -907,9 +910,9 @@ class Configuration:
                             self.nextcube_info = [(P[i],add_t(chk,(i if endTail else 0,0))) for i in range(len(P))]
         
     def check_cube_count(self):
-        print("self.config_size: "+str(self.config_size))
-        print("len(self.config): "+str(len(self.config)))
-        print("len(self.rotating_cubes): "+str(len(self.rotating_cubes)))
+        print(("self.config_size: "+str(self.config_size)))
+        print(("len(self.config): "+str(len(self.config))))
+        print(("len(self.rotating_cubes): "+str(len(self.rotating_cubes))))
 
         # check that we haven't done anything crazy
         assert len(self.config)+len(self.rotating_cubes) == self.config_size
@@ -932,7 +935,7 @@ class Configuration:
         zMax = max([c[2] for c in self.config])
         zMin = min([c[2] for c in self.config])
 
-        print("Slices remaining: " + str([str(cid) for cid in V_S.keys()]))
+        print(("Slices remaining: " + str([str(cid) for cid in V_S.keys()])))
         if len(V_S) == 1 :
             for cid in V_S.keys() : break
             comp = V_S[cid]
@@ -1001,15 +1004,15 @@ class Configuration:
         if not G_S :
             return G_S, G_S
 
-        print "not implemented"
+        print("not implemented")
         return None
         
         ncomp = len(G_S)
         visited = [False for i in range(ncomp)]
         is_articulation_point = [False for i in range(ncomp)]
         parent = [-1 for i in range(ncomp)]
-        depth = [sys.maxint for i in range(ncomp)]
-        min_succ_depth = [sys.maxint for i in range(ncomp)]
+        depth = [sys.maxsize for i in range(ncomp)]
+        min_succ_depth = [sys.maxsize for i in range(ncomp)]
         root = 0
         depth[0] = 0
         
@@ -1179,7 +1182,7 @@ class Configuration:
             the keys are indices of slices adjacent to the slice indicated by this_slice_id
             the values are True if the adjacent slice is in a branch, False otherwise
         '''
-        assert(slice_id in V_S.keys())
+        assert(slice_id in list(V_S.keys()))
 
         ''' A branch of a Slice is a subconfiguration of 
         Configuration-Slice not connected to the last slice
@@ -1405,6 +1408,6 @@ def main():
     #c4.show()
     #c2.flatten()
 
-    print "done"
+    print("done")
 
 if __name__ == '__main__': main()
