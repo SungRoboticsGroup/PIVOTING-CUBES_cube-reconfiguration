@@ -72,7 +72,7 @@ niter = 0;
                 vidObj.FrameRate = 30;
                 open(vidObj);
             case '.png'
-                npic = 0;
+                npic = 0;;
                 if ~exist(savename, 'dir')
                     mkdir(savename);
                 end
@@ -226,7 +226,7 @@ end
         maxcoord = max([maxcoord; A; slice; rotate(:,1:3); rotate(:,4:6)]);
         
         col = [.7 .7 .7];
-        alpha = 1;
+        alpha = 0.3;
         for iA = 1:size(A,1)
             xyz = A(iA,:);
             
@@ -389,7 +389,7 @@ end
         
         % Create an animation.
         % pause
-        if dosave && mod(niter, speedup) == 0
+        if dosave && (mod(niter, speedup) == 0)
             switch (savetype)
                 case '.avi'
                     currFrame = getframe(gcf);
