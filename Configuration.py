@@ -34,7 +34,7 @@ class Configuration:
     BUFF = 3
 
     # INITIALIZATION
-    def __init__(self, cubes, ispar = False, dodraw = False, dosave = False, saveprefix = ''):
+    def __init__(self, cubes, ispar = False, dodraw = False, dosave = False, saveprefix = '', tailsizelimit = None):
         self.ispar = ispar
 
         # for drawing
@@ -43,6 +43,7 @@ class Configuration:
         self.dosave = dosave
         self.save_prefix = saveprefix
         self.file = []
+        self.tailsizelimit = tailsizelimit
 
         # variables for parallel alg
         self.buff_timer = Configuration.BUFF
@@ -315,7 +316,7 @@ class Configuration:
                         done_relocate = False
                         nextslice = False
                         break
-                    else :
+                    elif (not self.tailsizelimit) or (len(self.T_set) < self.tailsizelimit):
                         self.config.add(tcube)
                         self.T_set.append(tcube) #it is now on the 3D tail
                 ################################################################
@@ -1371,7 +1372,7 @@ def main():
     #c = Configuration('halfbug.config', True, False, True, 'halfbug_par')
     #c = Configuration('5.config', True, True, False, '')
     
-    c = Configuration(testname+'.csv', ispar=False, dodraw=False, dosave=True, saveprefix=testname)
+    c = Configuration(testname+'.csv', ispar=False, dodraw=False, dosave=True, saveprefix=testname+"_clipped", tailsizelimit=5)
     #c.show()
     c.flatten()
     #c2 = Configuration([(-ctemp[1],-ctemp[0]) for ctemp in c.config],
