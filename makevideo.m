@@ -227,12 +227,12 @@ end
         maxcoord = max([maxcoord; A; slice; rotate(:,1:3); rotate(:,4:6)]);
         
         col = [.7 .7 .7];
-        alpha = 0.3;
+        alpha = 0.2;
         for iA = 1:size(A,1)
             xyz = A(iA,:);
             
             patch(CUBE_X+xyz(1), CUBE_Y+xyz(2), CUBE_Z+xyz(3),'k',...
-                'facecolor',col, 'facealpha', alpha,'linewidth',2,'edgealpha',alpha);
+                'facecolor',col, 'facealpha', alpha,'linewidth',1,'edgealpha',alpha);
         end
         
         col = [1 1 0];
@@ -376,7 +376,7 @@ end
 %                 drawnow
             %view(3)
             %view([0,-1,0])
-            view([-20, 15])
+            view([-20, -10, 5])
             axis equal
             %axis([-2 maxcoord(1)+2 -2 maxcoord(2)+2 -2 maxcoord(3)+2])
             %axis([-2 3 -2 2 -2 4]) % halfrotation
