@@ -32,7 +32,7 @@ if ~exist('speedup', 'var')
     speedup = 1;
 end
 
-resolution = 2;
+resolution = 4;
 
 CUBE_X = [-.5 -.5 .5 .5;
     -.5 -.5 .5 .5;

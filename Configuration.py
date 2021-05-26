@@ -1384,7 +1384,7 @@ def remove_slice(V_S, G_S, slice_id):
     return (V_S, G_S)
 
 def main():
-    testname = 'inbranch_L_2D'
+    testname = 'inbranch_L_3D'
     #c = Configuration(testname+'.config', False, False, True, testname)
     #c = Configuration('inadmissible2D_rule1.config', False, True)
     #c = Configuration('bad.config', False, True)
@@ -1392,8 +1392,8 @@ def main():
     #c = Configuration('halfbug.config', True, False, True, 'halfbug_par')
     #c = Configuration('5.config', True, True, False, '')
     
-    c = Configuration(testname+'.csv', ispar=False, dodraw=False, dosave=True, saveprefix=testname)
-    #c = Configuration(testname+'.csv', ispar=False, dodraw=False, dosave=True, saveprefix=testname+"_clipped", tailsizelimit=5)
+    #c = Configuration(testname+'.csv', ispar=False, dodraw=False, dosave=True, saveprefix=testname)
+    c = Configuration(testname+'.csv', ispar=False, dodraw=False, dosave=True, saveprefix=testname+"_clipped", tailsizelimit=5)
     c.flatten()
     #c2 = Configuration([(-ctemp[1],-ctemp[0]) for ctemp in c.config],
     #                   True, False, True, '5_par')
