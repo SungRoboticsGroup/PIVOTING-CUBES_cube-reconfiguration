@@ -65,10 +65,11 @@ niter = 0;
     if dosave
         [~,fpart] = fileparts(filename);
         savename = [fpart '3D_' num2str(speedup) 'x'];
+        % disp(strjoin([savename '.avi'],''));
         switch (savetype)
             case '.avi'
                 % Prepare the new file.
-                vidObj = VideoWriter([savename '.avi']);
+                vidObj = VideoWriter(strjoin([savename '.avi'],'')); %[savename '.avi']);
                 vidObj.FrameRate = 30;
                 open(vidObj);
             case '.png'
@@ -353,26 +354,26 @@ end
             axis off
             drawnow
         else
-            %     camerapos = [-150, -200, 150];
-            %     if viewangle == 0
-            %         set(gca,'cameraposition',camerapos)
-            %         cameratar = get(gca,'CameraTarget');
-            %         viewangle = get(gca,'cameraviewangle');
-            %     else
-            %         set(gca,'cameraposition',camerapos)
-            %         set(gca,'cameratarget', cameratar)
-            %         set(gca,'CameraViewAngleMode', 'auto')
-            %         testangle =  get(gca,'cameraviewangle');
-            %         if testangle < viewangle
-            %             set(gca,'cameraviewangle', viewangle)
-            %         elseif testangle > viewangle
-            %             viewangle = testangle;
-            %         end
-            %     end
-            %     set(gca,'cameraupvector',[0 0 -1])
-            %     axis equal
-            %     axis off
-            %     drawnow
+%                 camerapos = [-150, -200, 150];
+%                 if viewangle == 0
+%                     set(gca,'cameraposition',camerapos)
+%                     cameratar = get(gca,'CameraTarget');
+%                     viewangle = get(gca,'cameraviewangle');
+%                 else
+%                     set(gca,'cameraposition',camerapos)
+%                     set(gca,'cameratarget', cameratar)
+%                     set(gca,'CameraViewAngleMode', 'auto')
+%                     testangle =  get(gca,'cameraviewangle');
+%                     if testangle < viewangle
+%                         set(gca,'cameraviewangle', viewangle)
+%                     elseif testangle > viewangle
+%                         viewangle = testangle;
+%                     end
+%                 end
+%                 set(gca,'cameraupvector',[0 0 -1])
+%                 axis equal
+%                 axis off
+%                 drawnow
             %view(3)
             %view([0,-1,0])
             view([-20, 15])
@@ -382,6 +383,7 @@ end
             %axis([-2 4 -2 2 -2 4]) % stretch
             %axis([-4 4 -2 2 -2 6]) % infeasible
             %axis([-2 7 -2 7 -2 15]) % c4_steps
+            axis([-2 7 -2 7 -2 15]) % stalagmite_and_stalactite
             axis off
             drawnow
         end
