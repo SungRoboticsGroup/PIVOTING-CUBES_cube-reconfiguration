@@ -32,7 +32,7 @@ if ~exist('speedup', 'var')
     speedup = 1;
 end
 
-resolution = 10;
+resolution = 4;
 
 CUBE_X = [-.5 -.5 .5 .5;
     -.5 -.5 .5 .5;
@@ -383,7 +383,7 @@ end
             %axis([-2 4 -2 2 -2 4]) % stretch
             %axis([-4 4 -2 2 -2 6]) % infeasible
             %axis([-2 7 -2 7 -2 15]) % c4_steps
-            axis([-2 7 -2 7 -2 15]) % stalagmite_and_stalactite
+            axis([-2 8 -2 8 -2 15]) % stalagmite_and_stalactite
             axis off
             drawnow
         end
