@@ -108,6 +108,7 @@ niter = 0;
         if ~isempty(tline)
             if strcmp(tline(1:5), 'Slice')
                 slice = reshape(sscanf(tline(9:end-1), ['''Cube[(%d'  repmat(', %d', 1, dim-1) ')]'', ']), dim, [])';
+                % disp(slice);
                 [tf, loc] = ismember(slice, theconfig, 'rows');
                 if any(tf)
                     theconfig(loc(tf),:) = [];
@@ -227,36 +228,44 @@ end
         maxcoord = max([maxcoord; A; slice; rotate(:,1:3); rotate(:,4:6)]);
         
         col = [.7 .7 .7];
-        alpha = 0.2;
+        alpha = 0.5;
         for iA = 1:size(A,1)
             xyz = A(iA,:);
             
             patch(CUBE_X+xyz(1), CUBE_Y+xyz(2), CUBE_Z+xyz(3),'k',...
-                'facecolor',col, 'facealpha', alpha,'linewidth',1,'edgealpha',alpha);
+                'facecolor',col, 'facealpha', alpha,'linewidth',2,'edgealpha',alpha);
         end
         
-        col = [1 1 0];
-        bcol = [1 .5 0];
-        ecol = [0 .75 1];
-        alpha = 1;
-        [extreme, b] = boundarycheck(slice);
+       col = [0 1 0];
+       alpha = 1;
+       [extreme, b] = boundarycheck(slice);
         for islice = 1:size(slice,1)
             xyz = slice(islice,:);
-            
-            if xyz == extreme
-                patch(CUBE_X+xyz(1), CUBE_Y+xyz(2), CUBE_Z+xyz(3),'k',...
-                    'facecolor',ecol, 'facealpha', alpha,'linewidth',2,'edgealpha',alpha);
-            elseif ismember(xyz, b, 'rows')
-                patch(CUBE_X+xyz(1), CUBE_Y+xyz(2), CUBE_Z+xyz(3),'k',...
-                    'facecolor',bcol, 'facealpha', alpha,'linewidth',2,'edgealpha',alpha);
-            else
-                patch(CUBE_X+xyz(1), CUBE_Y+xyz(2), CUBE_Z+xyz(3),'k',...
-                    'facecolor',col, 'facealpha', alpha,'linewidth',2,'edgealpha',alpha);
-            end
+            patch(CUBE_X+xyz(1), CUBE_Y+xyz(2), CUBE_Z+xyz(3),'k',...
+                  'facecolor',col, 'facealpha', alpha,'linewidth',2,'edgealpha',alpha);
         end
         
+%        col = [1 1 0];
+%        bcol = [1 .5 0];
+%        ecol = [0 .75 1];
+%        alpha = 1;
+%        [extreme, b] = boundarycheck(slice);
+%         for islice = 1:size(slice,1)
+%             xyz = slice(islice,:);
+%             if xyz == extreme
+%                 patch(CUBE_X+xyz(1), CUBE_Y+xyz(2), CUBE_Z+xyz(3),'k',...
+%                     'facecolor',ecol, 'facealpha', alpha,'linewidth',2,'edgealpha',alpha);
+%             elseif ismember(xyz, b, 'rows')
+%                 patch(CUBE_X+xyz(1), CUBE_Y+xyz(2), CUBE_Z+xyz(3),'k',...
+%                     'facecolor',bcol, 'facealpha', alpha,'linewidth',2,'edgealpha',alpha);
+%             else
+%                 patch(CUBE_X+xyz(1), CUBE_Y+xyz(2), CUBE_Z+xyz(3),'k',...
+%                     'facecolor',col, 'facealpha', alpha,'linewidth',2,'edgealpha',alpha);
+%             end
+%         end
+        
         h = zeros(length(rotate));
-        col = [0 1 0];
+        col = [1 0 1];
         alpha = 1;
         for j = linspace(0,1, resolution)
             for irotate = 1:size(rotate,1)
@@ -383,7 +392,7 @@ end
             %axis([-2 4 -2 2 -2 4]) % stretch
             %axis([-4 4 -2 2 -2 6]) % infeasible
             %axis([-2 7 -2 7 -2 15]) % c4_steps
-            axis([-2 8 -2 8 -2 15]) % stalagmite_and_stalactite
+            axis([-2 8 -2 8 -2 12]) % stalagmite_and_stalactite
             axis off
             drawnow
         end

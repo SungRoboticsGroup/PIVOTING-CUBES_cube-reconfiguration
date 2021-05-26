@@ -290,6 +290,14 @@ class Configuration:
                 else:
                     slice, cid = self.find_extreme_slice(V_S, G_S)
                 
+                if self.dodraw:
+                    #self.drawing.draw_configuration(self.config, self.O_set, self.M_set, self.N_set, self.T_set, self.rotating_cubes, [self.slice_root])
+                    self.drawing.wait(500)
+                elif self.dosave:
+                    self.file.write('Slice: ')
+                    self.file.write(str(slice))
+                    self.file.write('\n')
+
                 ########## MOVE CUBES IN SLICE TO THE GLOBAL TAIL    ##########
                 ########## Pausing to remove branches as necessary   ##########
                 for tcube in slice.slice_deconstruction_order():
@@ -310,6 +318,8 @@ class Configuration:
                     
                     # Move tcube to the global tail:
                     self.config.remove(tcube)
+                    if branch:
+                        branch.config.remove(tcube)
                     tpath = self.find_path(tcube.pos, add_t(self.last_cube.pos, (0,0,len(self.T_set)+1)))
                     tcube = self.rotate_cube_along_path(tcube, tpath)
                     if tcube == None :
@@ -320,14 +330,6 @@ class Configuration:
                         self.config.add(tcube)
                         self.T_set.append(tcube) #it is now on the 3D tail
                 ################################################################
-
-                if self.dodraw:
-                    #self.drawing.draw_configuration(self.config, self.O_set, self.M_set, self.N_set, self.T_set, self.rotating_cubes, [self.slice_root])
-                    self.drawing.wait(500)
-                elif self.dosave:
-                    self.file.write('Slice: ')
-                    self.file.write(str(slice))
-                    self.file.write('\n')
                 
                 # remove slice from slice graph V_S, G_S
                 for i in G_S :
@@ -975,6 +977,9 @@ class Configuration:
                         comp = V_S[cid]
                         break
                 '''
+            if comp == None:
+                print('V_S = '+str(V_S))
+                print("self.config="+str([str(c) for c in self.config]))
             assert(comp != None) 
 
             ''' select root cube of comp: must '''
@@ -1364,7 +1369,7 @@ def remove_slice(V_S, G_S, slice_id):
     return (V_S, G_S)
 
 def main():
-    testname = 'stalagmite_and_stalactite'
+    testname = 'inbranch_L_3D'
     #c = Configuration(testname+'.config', False, False, True, testname)
     #c = Configuration('inadmissible2D_rule1.config', False, True)
     #c = Configuration('bad.config', False, True)
@@ -1372,8 +1377,8 @@ def main():
     #c = Configuration('halfbug.config', True, False, True, 'halfbug_par')
     #c = Configuration('5.config', True, True, False, '')
     
+    #c = Configuration(testname+'.csv', ispar=False, dodraw=False, dosave=True, saveprefix=testname)
     c = Configuration(testname+'.csv', ispar=False, dodraw=False, dosave=True, saveprefix=testname+"_clipped", tailsizelimit=5)
-    #c.show()
     c.flatten()
     #c2 = Configuration([(-ctemp[1],-ctemp[0]) for ctemp in c.config],
     #                   True, False, True, '5_par')
