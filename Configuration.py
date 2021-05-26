@@ -228,7 +228,7 @@ class Configuration:
             
 
     # RECONFIGURATION ALGORITHM
-    def flatten(self, branch=None, root = None):
+    def flatten(self, branch=None, root = None, grounding_slices=[]):
         ''' 
         branch is the local branch being deconstructed by this call
         self is the whole configuration
@@ -294,13 +294,18 @@ class Configuration:
                     #self.drawing.draw_configuration(self.config, self.O_set, self.M_set, self.N_set, self.T_set, self.rotating_cubes, [self.slice_root])
                     self.drawing.wait(500)
                 elif self.dosave:
+                    active_slices_config = slice.config
+                    for active_slice in grounding_slices:
+                        active_slices_config.update(active_slice.config)
+                    active_slices_union = Configuration(active_slices_config)
                     self.file.write('Slice: ')
-                    self.file.write(str(slice))
+                    self.file.write(str(active_slices_union))
                     self.file.write('\n')
 
                 ########## MOVE CUBES IN SLICE TO THE GLOBAL TAIL    ##########
                 ########## Pausing to remove branches as necessary   ##########
-                for tcube in slice.slice_deconstruction_order():
+                order_in_slice = slice.slice_deconstruction_order()
+                for tcube in order_in_slice:
                     if tcube == self.last_cube:
                         break #self.last_cube is already the start of the tail, don't want to move it to the end
                     assert(tcube in self.config)
@@ -311,13 +316,23 @@ class Configuration:
                         print(("slice ids before branch removal = " + str(list(V_S.keys()))))
                         print(("next_branch slice ids: " + str(slice_ids)))
                         print(("next_branch: " + str(next_branch)))
-                        self.flatten(branch=next_branch)
+                        self.flatten(branch=next_branch, grounding_slices=grounding_slices+[slice])
                         for slice_id in slice_ids:
                             remove_slice(V_S, G_S, slice_id)
                         print(("slice ids remaining after branch removal = " + str(list(V_S.keys()))))
+                        #reset the active slice to highlight in animation:
+                        if self.dosave:
+                            active_slices_config = slice.config
+                            for active_slice in grounding_slices:
+                                active_slices_config.update(active_slice.config)
+                            active_slices_union = Configuration(active_slices_config)
+                            self.file.write('Slice: ')
+                            self.file.write(str(active_slices_union))
+                            self.file.write('\n')
                     
                     # Move tcube to the global tail:
                     self.config.remove(tcube)
+                    slice.remove(tcube) #needed to maintain slice display in animation
                     if branch:
                         branch.config.remove(tcube)
                     tpath = self.find_path(tcube.pos, add_t(self.last_cube.pos, (0,0,len(self.T_set)+1)))
@@ -1369,7 +1384,7 @@ def remove_slice(V_S, G_S, slice_id):
     return (V_S, G_S)
 
 def main():
-    testname = 'inbranch_L_3D'
+    testname = 'inbranch_L_2D'
     #c = Configuration(testname+'.config', False, False, True, testname)
     #c = Configuration('inadmissible2D_rule1.config', False, True)
     #c = Configuration('bad.config', False, True)
@@ -1377,8 +1392,8 @@ def main():
     #c = Configuration('halfbug.config', True, False, True, 'halfbug_par')
     #c = Configuration('5.config', True, True, False, '')
     
-    #c = Configuration(testname+'.csv', ispar=False, dodraw=False, dosave=True, saveprefix=testname)
-    c = Configuration(testname+'.csv', ispar=False, dodraw=False, dosave=True, saveprefix=testname+"_clipped", tailsizelimit=5)
+    c = Configuration(testname+'.csv', ispar=False, dodraw=False, dosave=True, saveprefix=testname)
+    #c = Configuration(testname+'.csv', ispar=False, dodraw=False, dosave=True, saveprefix=testname+"_clipped", tailsizelimit=5)
     c.flatten()
     #c2 = Configuration([(-ctemp[1],-ctemp[0]) for ctemp in c.config],
     #                   True, False, True, '5_par')

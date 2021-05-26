@@ -32,7 +32,7 @@ if ~exist('speedup', 'var')
     speedup = 1;
 end
 
-resolution = 4;
+resolution = 2;
 
 CUBE_X = [-.5 -.5 .5 .5;
     -.5 -.5 .5 .5;
@@ -69,7 +69,7 @@ niter = 0;
         switch (savetype)
             case '.avi'
                 % Prepare the new file.
-                vidObj = VideoWriter(strjoin([savename '.avi'],'')); %[savename '.avi']);
+                vidObj = VideoWriter([savename '.avi']); %[savename '.avi']);
                 vidObj.FrameRate = 30;
                 open(vidObj);
             case '.png'
@@ -238,7 +238,6 @@ end
         
        col = [0 1 0];
        alpha = 1;
-       [extreme, b] = boundarycheck(slice);
         for islice = 1:size(slice,1)
             xyz = slice(islice,:);
             patch(CUBE_X+xyz(1), CUBE_Y+xyz(2), CUBE_Z+xyz(3),'k',...
@@ -385,14 +384,16 @@ end
 %                 drawnow
             %view(3)
             %view([0,-1,0])
-            view([-20, -10, 5])
+            %view([-20, -10, 5]) % stalagmite_and_stalactite
+            view([5, -20, 5])
             axis equal
             %axis([-2 maxcoord(1)+2 -2 maxcoord(2)+2 -2 maxcoord(3)+2])
             %axis([-2 3 -2 2 -2 4]) % halfrotation
             %axis([-2 4 -2 2 -2 4]) % stretch
             %axis([-4 4 -2 2 -2 6]) % infeasible
             %axis([-2 7 -2 7 -2 15]) % c4_steps
-            axis([-2 8 -2 8 -2 12]) % stalagmite_and_stalactite
+            %axis([-2 8 -2 8 -2 12]) % stalagmite_and_stalactite
+            axis([-2 12 -2 12 -2 12]) % inbranc_L_2D
             axis off
             drawnow
         end
