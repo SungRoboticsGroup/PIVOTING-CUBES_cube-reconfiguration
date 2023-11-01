@@ -33,7 +33,24 @@ class Configuration:
 
     BUFF = 3
 
-    # INITIALIZATION
+    """
+    cubes - the grid locations (x,y,z) integers of the set of cubes, given
+            as a list of 3-tuples or as the name of a csv file with columns
+                    x, y, z, r, g, b, alpha
+                    where r,g,b,alpha are for color and transparancy in
+                    animating 2D reconfigurations.
+                    Animating 3D reconfigurations requires the MATLAB code.
+    dodraw - animate the reconfiguration, ONLY WORKS FOR 2D
+    dosave - should it save the reconfiguration plan?
+    saveprefix - if dosave, it will save the reconfiguration plan in a file 
+                named saveprefix+"_steps.record"
+    tailsizelimit - defaults to None. If set to a non-negative integer, the 
+                    generated flattening plans will only generate the tail up
+                    to that length. This can be convenient for animating or 
+                    explaining plans, to avoid most of the plan being filled 
+                    up with "the current module moves one step along the tail".
+    ispar - not tested with 2021 algorithm, don't use
+    """
     def __init__(self, cubes, ispar = False, dodraw = False, dosave = False, saveprefix = '', tailsizelimit = None):
         self.ispar = ispar
 
@@ -1393,7 +1410,7 @@ def main():
     #c = Configuration('5.config', True, True, False, '')
     
     #c = Configuration(testname+'.csv', ispar=False, dodraw=False, dosave=True, saveprefix=testname)
-    c = Configuration(testname+'.csv', ispar=False, dodraw=False, dosave=True, saveprefix=testname+"_clipped", tailsizelimit=5)
+    c = Configuration(testname+'.csv', ispar=False, dosave=True, saveprefix=testname+"_clipped", tailsizelimit=5)
     c.flatten()
     #c2 = Configuration([(-ctemp[1],-ctemp[0]) for ctemp in c.config],
     #                   True, False, True, '5_par')
