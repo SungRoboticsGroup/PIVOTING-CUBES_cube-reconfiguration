@@ -1,4 +1,5 @@
 Code from:
+
 Daniel Feshbach and Cynthia Sung, 
 "Reconfiguring Non-Convex Holes in Pivoting Modular Cube Robots," 
 in IEEE Robotics and Automation Letters, vol. 6, no. 4, pp. 6701-6708, 
@@ -15,18 +16,19 @@ To turn it into another admissible configuration, the idea would be to then
 find the plan to turn the target configuration into a line, and reverse it.
 
 Dependencies for python (most recently tested with 3.11):
-pygame (I installed with pip3 install pygame)
-possibly other things that come installed with spyder
+
+    pygame (I installed with pip3 install pygame)
+    possibly other things that come installed with spyder
 
 Dependencies for MATLAB (most recently tested with R2023b):
 Simulink 3D Animation
 
-Working example to install:
-    In miniconda with python 3.11:
-        conda create -name pivoting_cubes
-        conda activate pivoting_cubes
-        conda install -c anaconda spyder
-        pip3 install pygame
+Working example to install, e.g in miniconda with python 3.11:
+    
+    conda create -name pivoting_cubes
+    conda activate pivoting_cubes
+    conda install -c anaconda spyder
+    pip3 install pygame
 
 To generate reconfiguration plans:
 
@@ -52,9 +54,10 @@ has the following parameters:
 - call the flatten() method on your Configuration object
 
 Example:
-testname = 'inbranch_L_3D'
-c = Configuration(testname+'.csv', ispar=False, dosave=True, saveprefix=testname+"_clipped", tailsizelimit=5)
-c.flatten()
+
+    testname = 'inbranch_L_3D'
+    c = Configuration(testname+'.csv', ispar=False, dosave=True, saveprefix=testname+"_clipped", tailsizelimit=5)
+    c.flatten()
 
 In the above example, we put "clipped" in the saveprefix to indicate that we
 are using a tail size limit - this is just our file naming convenction.
@@ -64,10 +67,13 @@ running the function as, e.g., plotCubes("inbranch_L_3D.csv") and then pan
 around in 3D for the cubes to start rendering.
 
 To animate 3D reconfiguration plans, use the makevideo.m MATLAB file. 
-makevideo(filename, savefile, speedup)
-filename - string name of .record file containing the plan
-savefile - true/false whether to save the result as an animation
-speedup - number of frames generated per frame saved
+
+    makevideo(filename, savefile, speedup)
+    filename - string name of .record file containing the plan
+    savefile - true/false whether to save the result as an animation
+    speedup - number of frames generated per frame saved
+
 
 Example:
-makevideo('./inbranch_L_3D_clipped_steps.record', true, 10)
+
+    makevideo('./inbranch_L_3D_clipped_steps.record', true, 10)
